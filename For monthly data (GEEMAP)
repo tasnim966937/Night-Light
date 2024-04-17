@@ -1,0 +1,32 @@
+import ee
+
+# Initialize the Earth Engine client library
+ee.Initialize()
+
+lon = 70
+lat = 50
+start_year = 1950
+end_year = 2024
+point = ee.Geometry.Point(lon, lat)
+years = ee.List.sequence(start_year, end_year)
+months = ee.List.sequence(1, 12)
+
+def get_best_image(year, month):
+
+    start_date = ee.Date.fromYMD(year, month, 1)
+    end_date = start_date.advance(1, 'month')
+    image = (
+        ee.ImageCollection("ECMWF/ERA5_LAND/MONTHLY_AGGR")
+        .filterBounds(point)
+        .filterDate(start_date, end_date)
+        .sort("CLOUD_COVER")
+        .first()
+    )
+    return ee.Image(image)
+
+# Create a collection of images for every month
+collection = ee.ImageCollection(
+    years.map(lambda y: months.map(lambda m: get_best_image(y, m)))
+    .flatten()
+    .filter(ee.Filter.notNull([]))
+)
